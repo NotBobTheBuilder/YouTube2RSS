@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 import sys
-import gdata
-from gdata import youtube
-from gdata.youtube import service
+
+from gdata.youtube import service as YT
 
 from urlparse import *
 
@@ -30,7 +29,7 @@ def PrintVideoFeed(yfeed):
     return rss
 
 def GetChannel(channelName):
-    yt_service = gdata.youtube.service.YouTubeService()
+    yt_service = YT.YouTubeService()
 
     # You can also retrieve a YouTubeVideoFeed by passing in the URI
     uri = 'http://gdata.youtube.com/feeds/api/users/%s/uploads?max-videos=25' % channelName
@@ -49,9 +48,7 @@ def GetChannel(channelName):
 
 
 
-def main(argv=None):
-    if argv is None:
-        argv = sys.argv
+def main(argv=sys.argv):
     print GetChannel(argv[1])
 
 if __name__ == "__main__":
