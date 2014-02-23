@@ -3,7 +3,7 @@ import sys
 
 from gdata.youtube import service as YT
 
-from urlparse import *
+from urlparse import parse_qs, urlparse
 
 from feed.date import rfc3339
 from feed.date import rfc822
