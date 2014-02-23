@@ -1,36 +1,46 @@
 #!/usr/bin/env python
 import sys
-import gdata
-from gdata import youtube
-from gdata.youtube import service
 
-from urlparse import *
+from gdata.youtube import service as YT
+
+from urlparse import parse_qs, urlparse
 
 from feed.date import rfc3339
 from feed.date import rfc822
 
 def PrintEntryDetails(entry):
-  YT_ID = parse_qs(urlparse(entry.media.player.url).query)['v'][0]
-  rss = ''
-  rss+= '<item>'
-  rss+= "<guid isPermaLink='false'>youtube:%s</guid>" % YT_ID
-  rss+= '<title>%s</title>' % entry.media.title.text
-  rss+= '<pubDate>%s</pubDate>' % rfc822.timestamp_from_tf(
+  rss = """
+<item>
+  <guid isPermaLink="false">youtube:{yt_id}</guid>
+  <title>{title_text}</title> 
+  <pubDate>{timestamp}</pubDate>
+  <description>
+    <iframe width="560"
+            height="315"
+            src="https://www.youtube.com/embed/{yt_id}?rel=0"
+            frameborder="0"
+            allowfullscreen="true">
+    </iframe>
+  <div>{desc}</div>
+  </description>
+</item>
+"""
+  yt_id     = parse_qs(urlparse(entry.media.player.url).query)['v'][0]
+  timestamp = rfc822.timestamp_from_tf(
       rfc3339.tf_from_timestamp(entry.published.text)
-      )
-  rss+= '<description><iframe width="560" height="315" src="https://www.youtube.com/embed/%(url)s?rel=0" frameborder="0" allowfullscreen="true" ></iframe><div>%(desc)s</div></description>' % {"url" : YT_ID, "desc" : entry.media.description.text}
-  rss+= '</item>'
-  return rss
+  )
+  return rss.format(
+      yt_id       = yt_id,
+      title_text  = entry.media.title.text,
+      timestamp   = timestamp,
+      desc        = entry.media.description.text
+  )
 
 def PrintVideoFeed(yfeed):
-    rss=''
-    for entry in yfeed.entry:
-        rss+=PrintEntryDetails(entry)
-
-    return rss
+    return "".join(PrintEntryDetails(entry) for entry in yfeed.entry)
 
 def GetChannel(channelName):
-    yt_service = gdata.youtube.service.YouTubeService()
+    yt_service = YT.YouTubeService()
 
     # You can also retrieve a YouTubeVideoFeed by passing in the URI
     uri = 'http://gdata.youtube.com/feeds/api/users/%s/uploads?max-videos=25' % channelName
@@ -47,11 +57,7 @@ def GetChannel(channelName):
         feedPair[1]+=25
     return rss
 
-
-
-def main(argv=None):
-    if argv is None:
-        argv = sys.argv
+def main(argv=sys.argv):
     print GetChannel(argv[1])
 
 if __name__ == "__main__":
