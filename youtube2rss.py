@@ -8,6 +8,37 @@ from urlparse import parse_qs, urlparse
 from feed.date import rfc3339
 from feed.date import rfc822
 
+class Channel:
+    def __init__(self, channel):
+        self.channel  = channel
+
+        self.service  = YT.YouTubeService()
+        uri           = "http://gdata.youtube.com/feeds/api/users/{u}/uploads"
+        self.uri      = uri.format(u=channel)
+        self.yfeed    = self.service.GetYouTubeVideoFeed(self.uri)
+        self.vidcount = int(self.yfeed.total_results.text) 
+
+    def __iter__(self):
+        self.index = 0
+        return self
+
+    def next(self):
+        if self.index >= self.vidcount:
+            raise StopIteration
+        self.index += 1
+
+        if len(self.yfeed.entry) == 0:
+            self.fetch_next()
+
+        return self.yfeed.entry.pop(0)
+
+    def __str__(self):
+        return "\n".join(PrintEntryDetails(entry) for entry in self)
+
+    def fetch_next(self):
+        uri = self.uri + "?start-index=" + str(self.index)
+        self.yfeed = self.service.GetYouTubeVideoFeed(uri)
+
 def PrintEntryDetails(entry):
   rss = """
 <item>
@@ -36,29 +67,5 @@ def PrintEntryDetails(entry):
       desc        = entry.media.description.text
   )
 
-def PrintVideoFeed(yfeed):
-    return "".join(PrintEntryDetails(entry) for entry in yfeed.entry)
-
-def GetChannel(channelName):
-    yt_service = YT.YouTubeService()
-
-    # You can also retrieve a YouTubeVideoFeed by passing in the URI
-    uri = 'http://gdata.youtube.com/feeds/api/users/%s/uploads?max-videos=25' % channelName
-    yfeed = yt_service.GetYouTubeVideoFeed(uri)
-    videoCount = int(yfeed.total_results.text)
-    rss = PrintVideoFeed(yfeed)
-    videoCount-=25
-    if videoCount>0: feedPair = [uri+'&start-index=',25]
-    while videoCount>0:
-        yfeed = yt_service.GetYouTubeVideoFeed(feedPair[0]+str(feedPair[1]))
-        #print feedPair[0]+str(feedPair[1])
-        rss+=PrintVideoFeed(yfeed)
-        videoCount-=25
-        feedPair[1]+=25
-    return rss
-
-def main(argv=sys.argv):
-    print GetChannel(argv[1])
-
 if __name__ == "__main__":
-    main()
+    print str(Channel(sys.argv[1]))
